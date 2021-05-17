@@ -1,5 +1,6 @@
 /*
 *
+* Copyright 2020-2021, paldier<paldier@hotmail.com>.
 *${CORSS_PREFIX}gcc -static fuckax3600.c -o fuckax3600
 *${CORSS_PREFIX}strip fuckax3600
 *
@@ -217,6 +218,7 @@ void MD5Final(MD5_CTX *context,unsigned char digest[16])
 
 static void usage(void)
 {
+	fprintf(stderr, "Copyright 2020-2021, paldier<paldier@hotmail.com>.\n");
 	fprintf(stderr, "Usage: fuckax3600\n");
 	fprintf(stderr, "fuckax3600 lock\n");
 	fprintf(stderr, "\tlock mtd9 and auto reboot\n");
