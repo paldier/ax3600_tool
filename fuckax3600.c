@@ -502,7 +502,7 @@ static int calc_img_crc()
 	crc = crc32(buf, BUFSIZE);
 	memset(buf, 0, sizeof(buf));
 	memset(buff, 0, sizeof(buff));
-	sprintf(buff, "%X", crc);
+	snprintf(buff, sizeof(buff), "%08X", crc);
 	atoe(buff, buf);
 	memset(buff, 0, sizeof(buff));
 	buff[0]=buf[3];
@@ -527,7 +527,9 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 		password_show();
-		printf("set ssh_en=1 telnet_en=1 uart_en=1\nset ssh default usesrname:root password:%s\n",password);
+		printf("set ssh_en=1 telnet_en=1 uart_en=1\nNOTE!!! ssh default usesrname:root password:%s\n",password);
+		printf("automatic lock mtd and reboot\n");
+		lock_mtd(1);
 	} else if (!strcmp(argv[1], "lock"))
 		lock_mtd(1);
 	else if (!strcmp(argv[1], "unlock"))
