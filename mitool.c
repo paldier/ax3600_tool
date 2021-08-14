@@ -26,6 +26,7 @@ static const struct model_s model_list[] = {
 	{ "RA69", "AX6" },//redmi
 	{ "RA70", "AX9000" },//xiaomi
 	{ "RA72", "AX6000" },//xiaomi
+	{ "RA80", "AX3000" },//xiaomi
 	{ "RA81", "AX3000" },//redmi
 	{ "RM1800", "AX1800" },//xiaomi
 	{ "R1800", "AX1800" },//xiaomi
