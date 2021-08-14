@@ -1,26 +1,22 @@
 # xiaomi/redmi ax router tool
 
 
-backup your mtd9
+Backup your mtd9
 
 `nanddump -f /tmp/bdata_mtd9.img /dev/mtd9`
 
-unlock the partition lock(automatic reboot)
+Unlock the partition lock(automatic reboot)
 
 `/tmp/mitool unlock`
 
-set ssh/uart/telnet to enable and display the default username/password
+Set ssh/uart/telnet to enable and show the default username/password(automatic reboot and relock the partition lock)
 
 `/tmp/mitool hack`
 
-relock the partition lock, otherwise the wifi will not work normally(automatic reboot)
-
-`/tmp/mitool lock`
-
-show password only
+Show password only
 
 `/tmp/mitool password`
 
-show model only
+Show model only
 
 `/tmp/mitool model`
