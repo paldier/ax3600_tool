@@ -431,12 +431,12 @@ static int lock_mtd(int t)
 	fseek(fd, 0, SEEK_SET);
 	fread(temp, 4, 1,fd);
 	fclose(fd);
-	if(t==0 ){
-		if(temp[0]!=0xA5){
-			temp[0]=0xA5;
-			temp[1]=0x5A;
-			temp[2]=0x0;
-			temp[3]=0x0;
+	if(t == 0){
+		if(temp[0] != 0xA5){
+			temp[0] = 0xA5;
+			temp[1] = 0x5A;
+			temp[2] = 0x0;
+			temp[3] = 0x0;
 			fd = fopen("/dev/mtdblock10", "wb");
 			if (fd < 0)
 				return -1;
@@ -447,11 +447,11 @@ static int lock_mtd(int t)
 		}
 		printf("mtd unlocked\n");
 	}else{
-		if(temp[0]!=0xFF){
-			temp[0]=0xFF;
-			temp[1]=0xFF;
-			temp[2]=0xFF;
-			temp[3]=0xFF;
+		if(temp[0] != 0xFF){
+			temp[0] = 0xFF;
+			temp[1] = 0xFF;
+			temp[2] = 0xFF;
+			temp[3] = 0xFF;
 			fd = fopen("/dev/mtdblock10", "wb");
 			if (fd < 0)
 				return -1;
@@ -485,7 +485,7 @@ static int model_show(void)
 
 	if(load_buf()<0)
 		return -1;
-	i = GetSubStrPos(buf,"model");
+	i = GetSubStrPos(buf, "model");
 	printf("model=%s\n", get_model(&buf[i+6]));
 }
 
@@ -495,10 +495,9 @@ static int password_show(void)
 	unsigned char decrypt[16];
 	unsigned char sn[99];
 	unsigned char salt[]="6d2df50a-250f-4a30-a5e6-d44fb0960aa0";
- 	unsigned char c3[]="SN=";
 	if(load_buf()<0)
 		return -1;
-	i = GetSubStrPos(buf,c3);
+	i = GetSubStrPos(buf, "SN=");
 	for(j=0;j<15;j++){
 		sprintf(&sn[j], "%c", buf[i+3+j]);//sn
 	}
@@ -506,37 +505,20 @@ static int password_show(void)
 	sprintf(buff, "%s%s", sn, salt);
 	MD5_CTX md5;
 	MD5Init(&md5);
-	MD5Update(&md5,buff,strlen(buff));
-	MD5Final(&md5,decrypt);
+	MD5Update(&md5, buff, strlen(buff));
+	MD5Final(&md5, decrypt);
 	memset(password, 0, sizeof(password));
-	for(i=0;i<4;i++)
+	for(i = 0; i < 4; i++)
 	{
-		sprintf(&password[i*2],"%02x",decrypt[i]);
+		sprintf(&password[i*2], "%02x", decrypt[i]);
 	}
 }
 
 static int calc_img_crc()
 {
-	FILE *fd;
-	int i,j;
 	unsigned int crc = 0xffffffff; 
- 	unsigned char c[]="ssh_en";
- 	unsigned char c1[]="telnet_en";
- 	unsigned char c2[]="uart_en";
+	FILE *fd;
 
-	if(load_buf()<0)
-		return -1;
-	i = GetSubStrPos(buf,"model");
-	printf("model=%s\n", get_model(&buf[i+6]));
-	i = GetSubStrPos(buf,c);
-	printf("get ssh_en=%c",buf[i+7]);
-	buf[i+7]='1';//ssh
-	i = GetSubStrPos(buf,c1);
-	printf(" telnet_en=%c",buf[i+10]);
-	buf[i+10]='1';//telnet
-	i = GetSubStrPos(buf,c2);
-	printf(" uart_en=%c\n",buf[i+8]);
-	buf[i+8]='1';//uart
 	fd = fopen("/dev/mtdblock9", "wb");
 	if (fd < 0)
 		return -1;
@@ -548,29 +530,52 @@ static int calc_img_crc()
 	snprintf(buff, sizeof(buff), "%08X", crc);
 	atoe(buff, buf);
 	memset(buff, 0, sizeof(buff));
-	buff[0]=buf[3];
-	buff[1]=buf[2];
-	buff[2]=buf[1];
-	buff[3]=buf[0];
+	buff[0] = buf[3];
+	buff[1] = buf[2];
+	buff[2] = buf[1];
+	buff[3] = buf[0];
 	fseek(fd, 0, SEEK_SET);
 	fwrite(buff, 1, 4, fd);
 	fclose(fd);
-	system("sed -i 's/channel=.*/channel=\"debug\"/g' /etc/init.d/dropbear");
 	return 0;
 }
- 
+
+
+static int open_ssh()
+{
+	int i,j, ret = 0;
+
+	if(load_buf()<0)
+		return -1;
+	i = GetSubStrPos(buf, "model");
+	printf("model=%s\n", get_model(&buf[i+6]));
+	i = GetSubStrPos(buf, "ssh_en");
+	printf("get ssh_en=%c", buf[i+7]);
+	buf[i+7] = '1';//ssh
+	i = GetSubStrPos(buf, "telnet_en");
+	printf(" telnet_en=%c", buf[i+10]);
+	buf[i+10] = '1';//telnet
+	i = GetSubStrPos(buf, "uart_en");
+	printf(" uart_en=%c\n", buf[i+8]);
+	buf[i+8] = '1';//uart
+	ret = calc_img_crc();
+	system("sed -i 's/channel=.*/channel=\"debug\"/g' /etc/init.d/dropbear");
+	system("/etc/init.d/dropbear start &");
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
 	int ret;
 	if (argc != 2)
 		usage();
 	else if (!strcmp(argv[1], "hack")) {
-		ret = calc_img_crc();
+		ret = open_ssh();
 		if (ret < 0) {
 			exit(1);
 		}
 		password_show();
-		printf("set ssh_en=1 telnet_en=1 uart_en=1\nNOTE!!! ssh default usesrname:root password:%s\n",password);
+		printf("set ssh_en=1 telnet_en=1 uart_en=1\nNOTE!!! ssh default/telnet usesrname:root password:%s\n",password);
 		printf("automatic lock mtd and reboot\n");
 		lock_mtd(1);
 	} else if (!strcmp(argv[1], "lock"))
@@ -579,7 +584,7 @@ int main(int argc, char **argv)
 		lock_mtd(0);
 	else if (!strcmp(argv[1], "password")){
 		password_show();
-		printf("ssh default usesrname:root password:%s\n",password);
+		printf("ssh/telnet default usesrname:root password:%s\n",password);
 	} else if (!strcmp(argv[1], "model")){
 		model_show();
 	} else
