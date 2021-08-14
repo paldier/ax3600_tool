@@ -1,8 +1,9 @@
 /*
 *
-* Copyright 2020-2021, paldier<paldier@hotmail.com>.
-*${CORSS_PREFIX}gcc -static fuckax3600.c -o fuckax3600
-*${CORSS_PREFIX}strip fuckax3600
+* Copyright (C) 2020-2021, paldier<paldier@hotmail.com>.
+*
+*${CORSS_PREFIX}gcc -static mitool.c -o mitool
+*${CORSS_PREFIX}strip mitool
 *
 */
 #include <stdio.h>
@@ -218,17 +219,20 @@ void MD5Final(MD5_CTX *context,unsigned char digest[16])
 
 static void usage(void)
 {
-	fprintf(stderr, "Copyright 2020-2021, paldier<paldier@hotmail.com>.\n");
-	fprintf(stderr, "Usage: fuckax3600\n");
-	fprintf(stderr, "fuckax3600 lock\n");
+	fprintf(stderr, "Copyright (c) 2020-2021, paldier<paldier@hotmail.com>.\n");
+	fprintf(stderr, "Usage: mitool\n");
+	fprintf(stderr, "mitool lock\n");
 	fprintf(stderr, "\tlock mtd9 and auto reboot\n");
-	fprintf(stderr, "fuckax3600 unlock\n");
+	fprintf(stderr, "mitool unlock\n");
 	fprintf(stderr, "\tunlock mtd9 and auto reboot\n");
-	fprintf(stderr, "fuckax3600 password\n");
+	fprintf(stderr, "mitool password\n");
 	fprintf(stderr, "\tprintf default password\n");
-	fprintf(stderr, "fuckax3600 hack\n");
+	fprintf(stderr, "mitool hack\n");
 	fprintf(stderr, "\tset ssh telnet uart to default enable\n");
+	fprintf(stderr, "mitool model\n");
+	fprintf(stderr, "\tshow model\n");
 }
+
 static const unsigned int crc32tab[] = {
  0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL,
  0x076dc419L, 0x706af48fL, 0xe963a535L, 0x9e6495a3L,
@@ -446,11 +450,20 @@ static int lock_mtd(int t)
 
 }
 
+static int model_show(void)
+{
+	int i,j;
+ 	unsigned char model[]="model";
+	if(load_buf()<0)
+		return -1;
+	memset(buf, 0, sizeof(buf));
+	i = GetSubStrPos(buf,model);
+	printf("%s\n",buf);
+}
 
 static int password_show(void)
 {
 	int i,j;
-	unsigned char buff[99];
 	unsigned char decrypt[16];
 	unsigned char sn[99];
 	unsigned char salt[]="6d2df50a-250f-4a30-a5e6-d44fb0960aa0";
@@ -482,9 +495,12 @@ static int calc_img_crc()
  	unsigned char c[]="ssh_en";
  	unsigned char c1[]="telnet_en";
  	unsigned char c2[]="uart_en";
+ 	unsigned char c3[]="model";
 
 	if(load_buf()<0)
 		return -1;
+	i = GetSubStrPos(buf,c3);
+	printf("%s\n",buf);
 	i = GetSubStrPos(buf,c);
 	printf("get ssh_en=%c",buf[i+7]);
 	buf[i+7]='1';//ssh
@@ -537,8 +553,11 @@ int main(int argc, char **argv)
 	else if (!strcmp(argv[1], "password")){
 		password_show();
 		printf("ssh default usesrname:root password:%s\n",password);
+	else if (!strcmp(argv[1], "model")){
+		model_show();
 	} else
 		usage();
  
 	return 0;
 }
+

@@ -1,4 +1,4 @@
-# ax3600_tool
+# xiaomi/redmi ax router tool
 
 
 backup your mtd9
@@ -7,16 +7,17 @@ backup your mtd9
 
 unlock the partition lock(automatic reboot)
 
-`/tmp/fuckax3600 unlock`
+`/tmp/mitool unlock`
 
 set ssh/uart/telnet to enable and display the default username/password
 
-`/tmp/fuckax3600 hack`
+`/tmp/mitool hack`
 
 relock the partition lock, otherwise the wifi will not work normally(automatic reboot)
 
-`/tmp/fuckax3600 lock`
+`/tmp/mitool lock`
 
 show password only
 
-`/tmp/fuckax3600 password`
+`/tmp/mitool password`
+
