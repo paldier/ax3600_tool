@@ -21,3 +21,6 @@ show password only
 
 `/tmp/mitool password`
 
+show model only
+
+`/tmp/mitool model`

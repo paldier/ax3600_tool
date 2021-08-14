@@ -15,8 +15,23 @@
 #include <sys/stat.h>
  
 #define BUFSIZE     65532
- 
 
+struct model_s {
+	char *pid;
+	char *model;
+};
+
+static const struct model_s model_list[] = {
+	{ "RA67", "AX5" },//redmi
+	{ "RA69", "AX6" },//redmi
+	{ "RA70", "AX9000" },//xiaomi
+	{ "RA72", "AX6000" },//xiaomi
+	{ "RA81", "AX3000" },//redmi
+	{ "RM1800", "AX1800" },//xiaomi
+	{ "R1800", "AX1800" },//xiaomi
+	{ "R3600", "AX3600" },//xiaomi
+	{ NULL, NULL },
+};
 
 typedef struct
 {
@@ -450,15 +465,28 @@ static int lock_mtd(int t)
 
 }
 
+char *get_model(char *pid)
+{
+	char *model = "unknown";
+	const struct model_s *p;
+
+	for (p = &model_list[0]; p->pid; ++p) {
+		if (!strcmp(pid, p->pid)) {
+			model = p->model;
+			break;
+		}
+	}
+	return model;
+}
+
 static int model_show(void)
 {
-	int i,j;
- 	unsigned char model[]="model";
+	int i;
+
 	if(load_buf()<0)
 		return -1;
-	memset(buf, 0, sizeof(buf));
-	i = GetSubStrPos(buf,model);
-	printf("%s\n",buf);
+	i = GetSubStrPos(buf,"model");
+	printf("model=%s\n", get_model(&buf[i+6]));
 }
 
 static int password_show(void)
@@ -495,12 +523,11 @@ static int calc_img_crc()
  	unsigned char c[]="ssh_en";
  	unsigned char c1[]="telnet_en";
  	unsigned char c2[]="uart_en";
- 	unsigned char c3[]="model";
 
 	if(load_buf()<0)
 		return -1;
-	i = GetSubStrPos(buf,c3);
-	printf("%s\n",buf);
+	i = GetSubStrPos(buf,"model");
+	printf("model=%s\n", get_model(&buf[i+6]));
 	i = GetSubStrPos(buf,c);
 	printf("get ssh_en=%c",buf[i+7]);
 	buf[i+7]='1';//ssh
@@ -553,7 +580,7 @@ int main(int argc, char **argv)
 	else if (!strcmp(argv[1], "password")){
 		password_show();
 		printf("ssh default usesrname:root password:%s\n",password);
-	else if (!strcmp(argv[1], "model")){
+	} else if (!strcmp(argv[1], "model")){
 		model_show();
 	} else
 		usage();
