@@ -16,6 +16,10 @@ elif [ "$1" == "password" ];then
 	/tmp/$tool password
 elif [ "$1" == "model" ];then
 	/tmp/$tool model
+elif [ "$1" == "sn" ];then
+	/tmp/$tool sn
+elif [ "$1" == "setsn" ];then
+	/tmp/$tool setsn $2
 else
 	echo "what?"
 fi
