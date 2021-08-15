@@ -7,16 +7,16 @@ Backup your mtd9
 
 Unlock the partition lock(automatic reboot)
 
-`/tmp/mitool unlock`
+`/tmp/mitool.sh unlock`
 
 Set ssh/uart/telnet to enable and show the default username/password(automatic reboot and relock the partition lock)
 
-`/tmp/mitool hack`
+`/tmp/mitool.sh hack`
 
 Show password only
 
-`/tmp/mitool password`
+`/tmp/mitool.sh password`
 
 Show model only
 
-`/tmp/mitool model`
+`/tmp/mitool.sh model`
