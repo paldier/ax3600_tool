@@ -20,3 +20,11 @@ Show password only
 Show model only
 
 `/tmp/mitool.sh model`
+
+Show sn only
+
+`/tmp/mitool.sh sn`
+
+set sn(automatic reboot and relock the partition lock)
+
+`/tmp/mitool.sh setsn xxxxxxxxxxxxx`

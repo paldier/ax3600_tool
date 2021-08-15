@@ -247,6 +247,10 @@ static void usage(void)
 	fprintf(stderr, "\tset ssh telnet uart to default enable\n");
 	fprintf(stderr, "mitool model\n");
 	fprintf(stderr, "\tshow model\n");
+	fprintf(stderr, "mitool sn\n");
+	fprintf(stderr, "\tshow sn\n");
+	fprintf(stderr, "mitool setsn xxxxxxxx\n");
+	fprintf(stderr, "\tset sn\n");
 }
 
 static const unsigned int crc32tab[] = {
@@ -466,6 +470,22 @@ static int lock_mtd(int t)
 
 }
 
+static int check_unlock()
+{
+	FILE *fd;
+	unsigned char temp[4];
+	fd = fopen("/dev/mtd10", "rb");
+	if (fd < 0)
+		return -1;
+	memset(temp, 0, sizeof(temp));
+	fseek(fd, 0, SEEK_SET);
+	fread(temp, 4, 1,fd);
+	fclose(fd);
+	if(temp[0] != 0xA5)
+		return 1;
+	return 0;
+}
+
 char *get_model(char *pid)
 {
 	char *model = "unknown";
@@ -541,37 +561,130 @@ static int calc_img_crc()
 	return 0;
 }
 
-
-static int open_ssh()
+static int add_bdata(char *s)
 {
-	int i,j, ret = 0;
+	int i;
+	if(s == NULL)
+		return -1;
+	for(i = 0; i < BUFSIZE; i++ ){
+		if(buf[i] == 0x0 && buf[i+1] == 0x0){
+			sprintf(&buf[i+1], "%s", s);
+			break;
+		}
+	}
+	return 0;
+}
+
+static int verify_sn(char *s)
+{
+	char sn[16];
+	int i;
+	memset(sn, 0, sizeof(sn));
+	snprintf(sn, sizeof(sn), "%s", s);
+	if(sn[5] != '/')
+		return -1;
+	for(i = 0; i < 5; i++){
+		if(sn[i] < '0' || sn[i] > '9')
+			return -1;
+	}
+	for(i = 6; i < 15; i++){
+		if((sn[i] < '0' || sn[i] > '9') && (sn[i] < 'A' || sn[i] > 'Z'))
+			return -1;
+	}
+	return 0;
+}
+
+static int set_ssh()
+{
+	int i, ret = 0;
 
 	if(load_buf()<0)
 		return -1;
+	if(check_unlock()){
+		printf("mtd is not unlocked\n");
+		return -1;
+	}
 	i = GetSubStrPos(buf, "model");
 	printf("model=%s\n", get_model(&buf[i+6]));
 	i = GetSubStrPos(buf, "ssh_en");
-	printf("get ssh_en=%c", buf[i+7]);
-	buf[i+7] = '1';//ssh
+	if(i < 0){
+		printf("not found ssh_en, add it.\n");
+		add_bdata("ssh_en=1");
+	}else{
+		printf("get ssh_en=%c", buf[i+7]);
+		buf[i+7] = '1';//ssh
+	}
 	i = GetSubStrPos(buf, "telnet_en");
-	printf(" telnet_en=%c", buf[i+10]);
-	buf[i+10] = '1';//telnet
+	if(i < 0){
+		printf("not found telnet_en, add it.\n");
+		add_bdata("telnet_en=1");
+	}else{
+		printf(" telnet_en=%c", buf[i+10]);
+		buf[i+10] = '1';//telnet
+	}
 	i = GetSubStrPos(buf, "uart_en");
-	printf(" uart_en=%c\n", buf[i+8]);
-	buf[i+8] = '1';//uart
+	if(i < 0){
+		printf("not found uart_en, add it.\n");
+		add_bdata("uart_en=1");
+	}else{
+		printf(" uart_en=%c\n", buf[i+8]);
+		buf[i+8] = '1';//uart
+	}
 	ret = calc_img_crc();
 	system("sed -i 's/channel=.*/channel=\"debug\"/g' /etc/init.d/dropbear");
 	system("/etc/init.d/dropbear start &");
 	return ret;
 }
 
+static int show_sn()
+{
+	int i;
+	if(load_buf()<0)
+		return -1;
+	i = GetSubStrPos(buf, "model");
+	printf("model=%s\n", get_model(&buf[i+6]));
+	i = GetSubStrPos(buf, "SN");
+	printf("get %s\n", &buf[i]);
+	return 0;
+}
+
+static int set_sn(char *sn)
+{
+	int i, ret = 0;
+
+	if(load_buf()<0)
+		return -1;
+	if(check_unlock()){
+		printf("mtd is not unlocked\n");
+		return -1;
+	}
+	if(strlen(sn) != 15 || verify_sn(sn) < 0){
+		printf("SN is wrong,%s\n",sn);
+		return -1;
+	}
+	i = GetSubStrPos(buf, "model");
+	printf("model=%s\n", get_model(&buf[i+6]));
+	i = GetSubStrPos(buf, "SN");
+	if(i < 0){
+		char tmp[19];
+		printf("not found SN, add it.\n");
+		memset(tmp, 0, sizeof(tmp));
+		snprintf(tmp, sizeof(tmp), "SN=%s", sn);
+		add_bdata(tmp);
+	}else{
+		printf("get %s\n", &buf[i]);
+		sprintf(&buf[i], "SN=%s", sn);
+	}
+	ret = calc_img_crc();
+	return ret;
+}
 int main(int argc, char **argv)
 {
 	int ret;
-	if (argc != 2)
+	if (argc < 2)
 		usage();
 	else if (!strcmp(argv[1], "hack")) {
-		ret = open_ssh();
+		ret = set_ssh();
 		if (ret < 0) {
 			exit(1);
 		}
@@ -588,6 +701,12 @@ int main(int argc, char **argv)
 		printf("ssh/telnet default usesrname:root password:%s\n",password);
 	} else if (!strcmp(argv[1], "model")){
 		model_show();
+	} else if (!strcmp(argv[1], "sn")){
+		show_sn();
+	} else if (!strcmp(argv[1], "setsn") && argv[2]){
+		set_sn(argv[2]);
+		printf("automatic lock mtd and reboot\n");
+		lock_mtd(1);
 	} else
 		usage();
  
