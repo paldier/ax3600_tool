@@ -379,9 +379,9 @@ int atoe(unsigned char *a, unsigned char *e)
 	return 0;
 }
 
-static int check_mtd9(void)
+static int find_bdata(void)
 {
-	int minor;
+	int part;
 	unsigned int size, erasesize;
 	char name[65];
 	char line[128];
@@ -389,28 +389,48 @@ static int check_mtd9(void)
 	if (fp == NULL)
 		return -1;
 	while (fgets(line, sizeof(line), fp)){
-		if (sscanf(line, "mtd%d: %x %x \"%64[^\"]\"", &minor, &size, &erasesize, name) == 4 && strcmp(name, "bdata") == 0){
-			if (minor==9){
-				fclose(fp);
-				return 1;
-			}
+		if (sscanf(line, "mtd%d: %x %x \"%64[^\"]\"", &part, &size, &erasesize, name) == 4 && strcmp(name, "bdata") == 0){
+			fclose(fp);
+			return part;
 		}
 	}
 	fclose(fp);
 	return -1;
 }
 
+static int find_crash(void)
+{
+	int part;
+	unsigned int size, erasesize;
+	char name[65];
+	char line[128];
+	FILE *fp = fopen("/proc/mtd", "r");
+	if (fp == NULL)
+		return -1;
+	while (fgets(line, sizeof(line), fp)){
+		if (sscanf(line, "mtd%d: %x %x \"%64[^\"]\"", &part, &size, &erasesize, name) == 4 && strcmp(name, "crash") == 0){
+			fclose(fp);
+			return part;
+		}
+	}
+	fclose(fp);
+	return -1;
+}
 
 unsigned char buf[BUFSIZE];
 unsigned char buff[99];
 static int load_buf(void)
 {
 	FILE *fd;
-	if(check_mtd9()<0){
-		printf("特殊版分区暂不支持\n");
+	int bdata = find_bdata();
+	char path[11];
+	if(bdata != 9 || bdata != 15 || bdata != 18){
+		printf("Unsupport model!\n");
 		return -1;
 	}
-	fd = fopen("/dev/mtd9", "rb");
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "/dev/mtd%d", bdata);
+	fd = fopen(path, "rb");
 	if (fd < 0)
 		return -1;
 	memset(buf, 0, sizeof(buf));
@@ -425,13 +445,21 @@ static int lock_mtd(int t)
 	FILE *fd;
 	int r;
 	unsigned char temp[4];
-	fd = fopen("/dev/mtd10", "rb");
-	if (fd < 0)
-		return -1;
-	if(!check_mtd9()){
-		printf("特殊版分区暂不支持\n");
+	char path[11];
+	char path2[11];
+	int bdata = find_bdata();
+	int crash = find_crash();
+	if(bdata != 9 || bdata != 15 || bdata != 18){
+		printf("Unsupport model!\n");
 		return -1;
 	}
+	memset(path, 0, sizeof(path));
+	memset(path2, 0, sizeof(path2));
+	snprintf(path, sizeof(path), "/dev/mtd%d", crash);
+	snprintf(path2, sizeof(path2), "/dev/mtdblock%d", crash);
+	fd = fopen(path, "rb");
+	if (fd < 0)
+		return -1;
 	memset(temp, 0, sizeof(temp));
 	fseek(fd, 0, SEEK_SET);
 	fread(temp, 4, 1,fd);
@@ -442,7 +470,7 @@ static int lock_mtd(int t)
 			temp[1] = 0x5A;
 			temp[2] = 0x0;
 			temp[3] = 0x0;
-			fd = fopen("/dev/mtdblock10", "wb");
+			fd = fopen(path2, "wb");
 			if (fd < 0)
 				return -1;
 			fseek(fd, 0, SEEK_SET);
@@ -457,7 +485,7 @@ static int lock_mtd(int t)
 			temp[1] = 0xFF;
 			temp[2] = 0xFF;
 			temp[3] = 0xFF;
-			fd = fopen("/dev/mtdblock10", "wb");
+			fd = fopen(path2, "wb");
 			if (fd < 0)
 				return -1;
 			fseek(fd, 0, SEEK_SET);
@@ -474,7 +502,11 @@ static int check_unlock()
 {
 	FILE *fd;
 	unsigned char temp[4];
-	fd = fopen("/dev/mtd10", "rb");
+	int crash = find_crash();
+	char path[11];
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "/dev/mtd%d", crash);
+	fd = fopen(path, "rb");
 	if (fd < 0)
 		return -1;
 	memset(temp, 0, sizeof(temp));
@@ -539,8 +571,12 @@ static int calc_img_crc()
 {
 	unsigned int crc = 0xffffffff; 
 	FILE *fd;
+	int bdata = find_bdata();
+	char path[11];
 
-	fd = fopen("/dev/mtdblock9", "wb");
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "/dev/mtdblock%d", bdata);
+	fd = fopen(path, "rb");
 	if (fd < 0)
 		return -1;
 	fseek(fd, 4, SEEK_SET);
@@ -598,7 +634,7 @@ static int set_ssh()
 {
 	int i, ret = 0;
 
-	if(load_buf()<0)
+	if(load_buf() < 0)
 		return -1;
 	if(check_unlock()){
 		printf("mtd is not unlocked\n");
@@ -639,7 +675,7 @@ static int set_ssh()
 static int show_sn()
 {
 	int i;
-	if(load_buf()<0)
+	if(load_buf() < 0)
 		return -1;
 	i = GetSubStrPos(buf, "model");
 	printf("model=%s\n", get_model(&buf[i+6]));
@@ -652,7 +688,7 @@ static int set_sn(char *sn)
 {
 	int i, ret = 0;
 
-	if(load_buf()<0)
+	if(load_buf() < 0)
 		return -1;
 	if(check_unlock()){
 		printf("mtd is not unlocked\n");
