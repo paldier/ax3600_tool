@@ -424,7 +424,7 @@ static int load_buf(void)
 	FILE *fd;
 	int bdata = find_bdata();
 	char path[11];
-	if(bdata != 9 || bdata != 15 || bdata != 18){
+	if(bdata != 9 && bdata != 15 && bdata != 18){
 		printf("Unsupport model!\n");
 		return -1;
 	}
@@ -449,7 +449,7 @@ static int lock_mtd(int t)
 	char path2[11];
 	int bdata = find_bdata();
 	int crash = find_crash();
-	if(bdata != 9 || bdata != 15 || bdata != 18){
+	if(bdata != 9 && bdata != 15 && bdata != 18){
 		printf("Unsupport model!\n");
 		return -1;
 	}
