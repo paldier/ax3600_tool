@@ -379,7 +379,7 @@ int atoe(unsigned char *a, unsigned char *e)
 	return 0;
 }
 
-static int find_bdata(void)
+static int find_mtd(char *mtd)
 {
 	int part;
 	unsigned int size, erasesize;
@@ -389,26 +389,7 @@ static int find_bdata(void)
 	if (fp == NULL)
 		return -1;
 	while (fgets(line, sizeof(line), fp)){
-		if (sscanf(line, "mtd%d: %x %x \"%64[^\"]\"", &part, &size, &erasesize, name) == 4 && strcmp(name, "bdata") == 0){
-			fclose(fp);
-			return part;
-		}
-	}
-	fclose(fp);
-	return -1;
-}
-
-static int find_crash(void)
-{
-	int part;
-	unsigned int size, erasesize;
-	char name[65];
-	char line[128];
-	FILE *fp = fopen("/proc/mtd", "r");
-	if (fp == NULL)
-		return -1;
-	while (fgets(line, sizeof(line), fp)){
-		if (sscanf(line, "mtd%d: %x %x \"%64[^\"]\"", &part, &size, &erasesize, name) == 4 && strcmp(name, "crash") == 0){
+		if (sscanf(line, "mtd%d: %x %x \"%64[^\"]\"", &part, &size, &erasesize, name) == 4 && strcmp(name, mtd) == 0){
 			fclose(fp);
 			return part;
 		}
@@ -422,7 +403,7 @@ unsigned char buff[99];
 static int load_buf(void)
 {
 	FILE *fd;
-	int bdata = find_bdata();
+	int bdata = find_mtd("bdata");
 	char path[11];
 	if(bdata != 9 && bdata != 15 && bdata != 18){
 		printf("Unsupport model!\n");
@@ -443,12 +424,11 @@ static int load_buf(void)
 static int lock_mtd(int t)
 {
 	FILE *fd;
-	int r;
 	unsigned char temp[4];
 	char path[11];
-	char path2[11];
-	int bdata = find_bdata();
-	int crash = find_crash();
+	char path2[16];
+	int bdata = find_mtd("bdata");
+	int crash = find_mtd("crash");
 	if(bdata != 9 && bdata != 15 && bdata != 18){
 		printf("Unsupport model!\n");
 		return -1;
@@ -474,7 +454,7 @@ static int lock_mtd(int t)
 			if (fd < 0)
 				return -1;
 			fseek(fd, 0, SEEK_SET);
-			r=fwrite(temp, 1, 4,fd);
+			fwrite(temp, 1, 4, fd);
 			fclose(fd);
 			system("/sbin/reboot");
 		}
@@ -489,7 +469,7 @@ static int lock_mtd(int t)
 			if (fd < 0)
 				return -1;
 			fseek(fd, 0, SEEK_SET);
-			r=fwrite(temp, 1, 4,fd);
+			fwrite(temp, 1, 4, fd);
 			fclose(fd);
 			system("/sbin/reboot");
 		}
@@ -502,7 +482,7 @@ static int check_unlock()
 {
 	FILE *fd;
 	unsigned char temp[4];
-	int crash = find_crash();
+	int crash = find_mtd("crash");
 	char path[11];
 	memset(path, 0, sizeof(path));
 	snprintf(path, sizeof(path), "/dev/mtd%d", crash);
@@ -511,7 +491,7 @@ static int check_unlock()
 		return -1;
 	memset(temp, 0, sizeof(temp));
 	fseek(fd, 0, SEEK_SET);
-	fread(temp, 4, 1,fd);
+	fread(temp, 4, 1, fd);
 	fclose(fd);
 	if(temp[0] != 0xA5)
 		return 1;
@@ -571,8 +551,8 @@ static int calc_img_crc()
 {
 	unsigned int crc = 0xffffffff; 
 	FILE *fd;
-	int bdata = find_bdata();
-	char path[11];
+	int bdata = find_mtd("bdata");
+	char path[16];
 
 	memset(path, 0, sizeof(path));
 	snprintf(path, sizeof(path), "/dev/mtdblock%d", bdata);
