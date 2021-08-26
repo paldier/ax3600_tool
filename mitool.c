@@ -556,7 +556,7 @@ static int calc_img_crc()
 
 	memset(path, 0, sizeof(path));
 	snprintf(path, sizeof(path), "/dev/mtdblock%d", bdata);
-	fd = fopen(path, "rb");
+	fd = fopen(path, "wb");
 	if (fd < 0)
 		return -1;
 	fseek(fd, 4, SEEK_SET);
