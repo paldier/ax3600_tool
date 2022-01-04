@@ -1,10 +1,15 @@
 #!/bin/sh
 
-arch=`cat /proc/cpuinfo | grep architecture | sed -n '1p' | awk -F ':' '{printf $2}'`
-if [ $arch == 8 ];then
-	tool=mitool_arm64
+arch=`uname -m`
+archver=`cat /proc/cpuinfo | grep architecture | sed -n '1p' | awk -F ':' '{printf $2}'`
+if [ "$arch" == "mips" ];then
+	tool=mitool_mipsle
 else
-	tool=mitool_arm
+	if [ $archver == 8 ];then
+		tool=mitool_arm64
+	else
+		tool=mitool_arm
+	fi
 fi
 if [ "$1" == "unlock" ];then
 	/tmp/$tool unlock

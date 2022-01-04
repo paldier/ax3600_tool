@@ -1,7 +1,8 @@
 # xiaomi/redmi ax router tool
 
+cr660x is contributed by ericwang2006
 
-Backup your mtd9
+Backup your mtd9(cr660x is mtd2)
 
 `nanddump -f /tmp/bdata_mtd9.img /dev/mtd9`
 

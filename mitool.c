@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (C) 2020-2021, paldier<paldier@hotmail.com>.
+* Copyright (C) 2020-2022, paldier<paldier@hotmail.com>.
 *
 *${CORSS_PREFIX}gcc -static mitool.c -o mitool
 *${CORSS_PREFIX}strip mitool
@@ -16,12 +16,23 @@
  
 #define BUFSIZE     65532
 
+#if defined(__mips__)
+static int iscr660x = 1;
+#else
+static int iscr660x = 0;
+#endif
+
 struct model_s {
 	char *pid;
 	char *model;
 };
 
 static const struct model_s model_list[] = {
+#if defined(__mips__)
+	{ "CR6606", "CR6606" },//xiaomi
+	{ "CR6608", "CR6608" },//xiaomi
+	{ "CR6609", "CR6609" },//xiaomi
+#else
 	{ "RA67", "AX5" },//redmi
 	{ "RA69", "AX6" },//redmi
 	{ "RA70", "AX9000" },//xiaomi
@@ -31,6 +42,7 @@ static const struct model_s model_list[] = {
 	{ "RM1800", "AX1800" },//xiaomi
 	{ "R1800", "AX1800" },//xiaomi
 	{ "R3600", "AX3600" },//xiaomi
+#endif
 	{ NULL, NULL },
 };
 
@@ -238,9 +250,9 @@ static void usage(void)
 	fprintf(stderr, "Copyright (c) 2020-2021, paldier<paldier@hotmail.com>.\n");
 	fprintf(stderr, "Usage: mitool\n");
 	fprintf(stderr, "mitool lock\n");
-	fprintf(stderr, "\tlock mtd9 and auto reboot\n");
+	fprintf(stderr, "\tlock %s and auto reboot\n", iscr660x ? "mtd2" : "mtd9");
 	fprintf(stderr, "mitool unlock\n");
-	fprintf(stderr, "\tunlock mtd9 and auto reboot\n");
+	fprintf(stderr, "\tunlock %s and auto reboot\n", iscr660x ? "mtd2" : "mtd9");
 	fprintf(stderr, "mitool password\n");
 	fprintf(stderr, "\tprintf default password\n");
 	fprintf(stderr, "mitool hack\n");
@@ -403,9 +415,20 @@ unsigned char buff[99];
 static int load_buf(void)
 {
 	FILE *fd;
-	int bdata = find_mtd("bdata");
+	int bdata;
 	char path[11];
+	char *mtdname = NULL;
+	if(iscr660x)
+		mtdname = "Bdata";
+	else
+		mtdname = "bdata";	
+	bdata = find_mtd(mtdname);
+#if defined(__mips__)
+	if(bdata != 2){
+#else
 	if(bdata != 9 && bdata != 15 && bdata != 18){
+#endif
+	//if((iscr660x && bdata != 2) || (!iscr660x && bdata != 9 && bdata != 15 && bdata != 18)){
 		printf("Unsupport model!\n");
 		return -1;
 	}
@@ -427,9 +450,20 @@ static int lock_mtd(int t)
 	unsigned char temp[4];
 	char path[11];
 	char path2[16];
-	int bdata = find_mtd("bdata");
+	char *mtdname = NULL;
+	int bdata;
 	int crash = find_mtd("crash");
+	if(iscr660x)
+		mtdname = "Bdata";
+	else
+		mtdname = "bdata";
+	bdata = find_mtd(mtdname);
+#if defined(__mips__)
+	if(bdata != 2){
+#else
 	if(bdata != 9 && bdata != 15 && bdata != 18){
+#endif
+	//if((iscr660x && bdata != 2) || (!iscr660x && bdata != 9 && bdata != 15 && bdata != 18)){
 		printf("Unsupport model!\n");
 		return -1;
 	}
@@ -551,8 +585,14 @@ static int calc_img_crc()
 {
 	unsigned int crc = 0xffffffff; 
 	FILE *fd;
-	int bdata = find_mtd("bdata");
+	int bdata;
 	char path[16];
+	char *mtdname = NULL;
+	if(iscr660x)
+		mtdname = "Bdata";
+	else
+		mtdname = "bdata";	
+	bdata = find_mtd(mtdname);
 
 	memset(path, 0, sizeof(path));
 	snprintf(path, sizeof(path), "/dev/mtdblock%d", bdata);
