@@ -1,6 +1,7 @@
 /*
 *
 * Copyright (C) 2020-2022, paldier<paldier@hotmail.com>.
+* Copyright (C) 2022, ericwang2006.
 *
 *${CORSS_PREFIX}gcc -static mitool.c -o mitool
 *${CORSS_PREFIX}strip mitool
