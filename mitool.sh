@@ -1,5 +1,6 @@
 #!/bin/sh
 
+PWD=$(pwd)
 arch=`uname -m`
 archver=`cat /proc/cpuinfo | grep architecture | sed -n '1p' | awk -F ':' '{printf $2}'`
 if [ "$arch" == "mips" ];then
@@ -12,19 +13,19 @@ else
 	fi
 fi
 if [ "$1" == "unlock" ];then
-	/tmp/$tool unlock
+	$PWD/$tool unlock
 elif [ "$1" == "hack" ];then
-	/tmp/$tool hack
+	$PWD/$tool hack
 elif [ "$1" == "lock" ];then
-	/tmp/$tool lock
+	$PWD/$tool lock
 elif [ "$1" == "password" ];then
-	/tmp/$tool password
+	$PWD/$tool password
 elif [ "$1" == "model" ];then
-	/tmp/$tool model
+	$PWD/$tool model
 elif [ "$1" == "sn" ];then
-	/tmp/$tool sn
+	$PWD/$tool sn
 elif [ "$1" == "setsn" ];then
-	/tmp/$tool setsn $2
+	$PWD/$tool setsn $2
 else
 	echo "what?"
 fi

@@ -17,34 +17,29 @@
  
 #define BUFSIZE     65532
 
-#if defined(__mips__)
-static int iscr660x = 1;
-#else
-static int iscr660x = 0;
-#endif
+static int modelid = 0;
 
 struct model_s {
+	int modelid;
 	char *pid;
 	char *model;
 };
 
 static const struct model_s model_list[] = {
-#if defined(__mips__)
-	{ "CR6606", "CR6606" },//xiaomi
-	{ "CR6608", "CR6608" },//xiaomi
-	{ "CR6609", "CR6609" },//xiaomi
-#else
-	{ "RA67", "AX5" },//redmi
-	{ "RA69", "AX6" },//redmi
-	{ "RA70", "AX9000" },//xiaomi
-	{ "RA72", "AX6000" },//xiaomi
-	{ "RA80", "AX3000" },//xiaomi
-	{ "RA81", "AX3000" },//redmi
-	{ "RM1800", "AX1800" },//xiaomi
-	{ "R1800", "AX1800" },//xiaomi
-	{ "R3600", "AX3600" },//xiaomi
-#endif
-	{ NULL, NULL },
+	{ 1, "CR6606", "CR6606" },//xiaomi
+	{ 2, "CR6608", "CR6608" },//xiaomi
+	{ 3, "CR6609", "CR6609" },//xiaomi
+	{ 4, "RA67", "AX5" },//redmi
+	{ 5, "RA69", "AX6" },//redmi
+	{ 6, "RA70", "AX9000" },//xiaomi
+	{ 7, "RA72", "AX6000" },//xiaomi
+	{ 8, "RA80", "AX3000" },//xiaomi
+	{ 9, "RA81", "AX3000" },//redmi
+	{ 10, "RM1800", "AX1800" },//xiaomi
+	{ 11, "R1800", "AX1800" },//xiaomi
+	{ 12, "R3600", "AX3600" },//xiaomi
+	{ 13, "RB06", "AX6000" },//redmi
+	{ -1, NULL, NULL },
 };
 
 typedef struct
@@ -246,26 +241,6 @@ void MD5Final(MD5_CTX *context,unsigned char digest[16])
 	MD5Encode(digest,context->state,16);
 }
 
-static void usage(void)
-{
-	fprintf(stderr, "Copyright (c) 2020-2021, paldier<paldier@hotmail.com>.\n");
-	fprintf(stderr, "Usage: mitool\n");
-	fprintf(stderr, "mitool lock\n");
-	fprintf(stderr, "\tlock %s and auto reboot\n", iscr660x ? "mtd2" : "mtd9");
-	fprintf(stderr, "mitool unlock\n");
-	fprintf(stderr, "\tunlock %s and auto reboot\n", iscr660x ? "mtd2" : "mtd9");
-	fprintf(stderr, "mitool password\n");
-	fprintf(stderr, "\tprintf default password\n");
-	fprintf(stderr, "mitool hack\n");
-	fprintf(stderr, "\tset ssh telnet uart to default enable\n");
-	fprintf(stderr, "mitool model\n");
-	fprintf(stderr, "\tshow model\n");
-	fprintf(stderr, "mitool sn\n");
-	fprintf(stderr, "\tshow sn\n");
-	fprintf(stderr, "mitool setsn xxxxxxxx\n");
-	fprintf(stderr, "\tset sn\n");
-}
-
 static const unsigned int crc32tab[] = {
  0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL,
  0x076dc419L, 0x706af48fL, 0xe963a535L, 0x9e6495a3L,
@@ -418,21 +393,10 @@ static int load_buf(void)
 	FILE *fd;
 	int bdata;
 	char path[11];
-	char *mtdname = NULL;
-	if(iscr660x)
-		mtdname = "Bdata";
-	else
-		mtdname = "bdata";	
-	bdata = find_mtd(mtdname);
-#if defined(__mips__)
-	if(bdata != 2){
-#else
-	if(bdata != 9 && bdata != 15 && bdata != 18){
-#endif
-	//if((iscr660x && bdata != 2) || (!iscr660x && bdata != 9 && bdata != 15 && bdata != 18)){
-		printf("Unsupport model!\n");
-		return -1;
-	}
+	bdata = find_mtd("Bdata");
+	if(bdata == -1)
+		bdata = find_mtd("bdata");
+
 	memset(path, 0, sizeof(path));
 	snprintf(path, sizeof(path), "/dev/mtd%d", bdata);
 	fd = fopen(path, "rb");
@@ -451,23 +415,13 @@ static int lock_mtd(int t)
 	unsigned char temp[4];
 	char path[11];
 	char path2[16];
-	char *mtdname = NULL;
 	int bdata;
 	int crash = find_mtd("crash");
-	if(iscr660x)
-		mtdname = "Bdata";
-	else
-		mtdname = "bdata";
-	bdata = find_mtd(mtdname);
-#if defined(__mips__)
-	if(bdata != 2){
-#else
-	if(bdata != 9 && bdata != 15 && bdata != 18){
-#endif
-	//if((iscr660x && bdata != 2) || (!iscr660x && bdata != 9 && bdata != 15 && bdata != 18)){
-		printf("Unsupport model!\n");
-		return -1;
-	}
+
+	bdata = find_mtd("Bdata");
+	if(bdata == -1)
+		bdata = find_mtd("bdata");
+
 	memset(path, 0, sizeof(path));
 	memset(path2, 0, sizeof(path2));
 	snprintf(path, sizeof(path), "/dev/mtd%d", crash);
@@ -547,6 +501,20 @@ char *get_model(char *pid)
 	return model;
 }
 
+int get_modelid(char *pid)
+{
+	int id;
+	const struct model_s *p;
+
+	for (p = &model_list[0]; p->pid; ++p) {
+		if (!strcmp(pid, p->pid)) {
+			id = p->modelid;
+			break;
+		}
+	}
+	return id;
+}
+
 static int model_show(void)
 {
 	int i;
@@ -555,6 +523,43 @@ static int model_show(void)
 		return -1;
 	i = GetSubStrPos(buf, "model");
 	printf("model=%s\n", get_model(&buf[i+6]));
+}
+
+static char *show_lockmtd()
+{
+	int i;
+	if(modelid == 0){
+		if(load_buf()<0)
+			return "unknown";
+		i = GetSubStrPos(buf, "model");
+		modelid = get_modelid(&buf[i+6]);
+	}
+	if(modelid == 1 || modelid == 2 || modelid == 3)
+		return "mtd2";
+	else if(modelid == 13)
+		return "mtd6";
+	else
+		return "mtd6";
+}
+
+static void usage(void)
+{
+	fprintf(stderr, "Copyright (c) 2020-2022, paldier<paldier@hotmail.com>.\n");
+	fprintf(stderr, "Usage: mitool\n");
+	fprintf(stderr, "mitool lock\n");
+	fprintf(stderr, "\tlock %s and auto reboot\n", show_lockmtd);
+	fprintf(stderr, "mitool unlock\n");
+	fprintf(stderr, "\tunlock %s and auto reboot\n", show_lockmtd);
+	fprintf(stderr, "mitool password\n");
+	fprintf(stderr, "\tprintf default password\n");
+	fprintf(stderr, "mitool hack\n");
+	fprintf(stderr, "\tset ssh telnet uart to default enable\n");
+	fprintf(stderr, "mitool model\n");
+	fprintf(stderr, "\tshow model\n");
+	fprintf(stderr, "mitool sn\n");
+	fprintf(stderr, "\tshow sn\n");
+	fprintf(stderr, "mitool setsn xxxxxxxx\n");
+	fprintf(stderr, "\tset sn\n");
 }
 
 static int password_show(void)
@@ -588,12 +593,10 @@ static int calc_img_crc()
 	FILE *fd;
 	int bdata;
 	char path[16];
-	char *mtdname = NULL;
-	if(iscr660x)
-		mtdname = "Bdata";
-	else
-		mtdname = "bdata";	
-	bdata = find_mtd(mtdname);
+
+	bdata = find_mtd("Bdata");
+	if(bdata == -1)
+		bdata = find_mtd("bdata");
 
 	memset(path, 0, sizeof(path));
 	snprintf(path, sizeof(path), "/dev/mtdblock%d", bdata);
@@ -746,7 +749,7 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 		password_show();
-		printf("set ssh_en=1 telnet_en=1 uart_en=1\nNOTE!!! ssh default/telnet usesrname:root password:%s\n",password);
+		printf("set ssh_en=1 telnet_en=1 uart_en=1\nNOTE!!! ssh/telnet default usesrname:root\ndefault password:%s\n",password);
 		printf("automatic lock mtd and reboot\n");
 		lock_mtd(1);
 	} else if (!strcmp(argv[1], "lock"))
