@@ -39,6 +39,7 @@ static const struct model_s model_list[] = {
 	{ 11, "R1800", "AX1800" },//xiaomi
 	{ 12, "R3600", "AX3600" },//xiaomi
 	{ 13, "RB06", "AX6000" },//redmi
+	{ 14, "RD03", "AX3000T" },//xiaomi
 	{ -1, NULL, NULL },
 };
 
@@ -544,12 +545,13 @@ static char *show_lockmtd()
 
 static void usage(void)
 {
+	const char* lockmtd = show_lockmtd();
 	fprintf(stderr, "Copyright (c) 2020-2022, paldier<paldier@hotmail.com>.\n");
 	fprintf(stderr, "Usage: mitool\n");
 	fprintf(stderr, "mitool lock\n");
-	fprintf(stderr, "\tlock %s and auto reboot\n", show_lockmtd);
+	fprintf(stderr, "\tlock %s and auto reboot\n", lockmtd);
 	fprintf(stderr, "mitool unlock\n");
-	fprintf(stderr, "\tunlock %s and auto reboot\n", show_lockmtd);
+	fprintf(stderr, "\tunlock %s and auto reboot\n", lockmtd);
 	fprintf(stderr, "mitool password\n");
 	fprintf(stderr, "\tprintf default password\n");
 	fprintf(stderr, "mitool hack\n");
